@@ -4,14 +4,14 @@ const praise = document.querySelector('a[data-reactid=".0.3.0"]');
 
 
 /* Trading */
-document.querySelector(".Trade").click();
-let tradingArray = Array.from(document.querySelectorAll(".title"));
+// let tradingArray = Array.from(document.querySelectorAll(".title"));
 
-let myFilteredArray = tradingArray.filter((element, index) => {
-    if (element.innerText.search("Zebra") >= 0) {
-        return { index, element };
-    }
-})
+// let myFilteredArray = tradingArray.filter((element, index) => {
+//     if (element.innerText.search("Zebra") >= 0) {
+//         return { index, element };
+//     }
+// })
+
 
 // Can grab .craft class for these to automate it
 //let craftingArr = Array.from(document.querySelectorAll(".craft")) -> nodeList - converted to array.
@@ -19,16 +19,16 @@ let myFilteredArray = tradingArray.filter((element, index) => {
 // on each of them .querySelector(".all"); -> this should return the "all" link element
 
 /* Resources */
-const woodAll = document.querySelector('div[data-reactid=".0.5.1.0.0.6.0"]');
-const beamAll = document.querySelector('div[data-reactid=".0.5.1.0.2.6.0"]');
-const slabAll = document.querySelector('div[data-reactid=".0.5.1.0.3.6.0"]');
-const plateAll = document.querySelector('div[data-reactid=".0.5.1.0.4.6.0"]');
-const steelAll = document.querySelector('div[data-reactid=".0.5.1.0.5.6.0"]');
-const alloyAll = document.querySelector('[data-reactid=".0.5.1.0.8.6.0"]');
-const keroseneAll = document.querySelector('[data-reactid=".0.5.1.0.d.6.0"]');
-const parchmentAll = document.querySelector('div[data-reactid=".0.5.1.0.e.6.0"]');
-const manuscriptAll = document.querySelector('div[data-reactid=".0.5.1.0.f.6.0"]');
-const compendiumAll = document.querySelector('div[data-reactid=".0.5.1.0.g.6.0"]');
+// const woodAll = document.querySelector('div[data-reactid=".0.5.1.0.0.6.0"]');
+// const beamAll = document.querySelector('div[data-reactid=".0.5.1.0.2.6.0"]');
+// const slabAll = document.querySelector('div[data-reactid=".0.5.1.0.3.6.0"]');
+// const plateAll = document.querySelector('div[data-reactid=".0.5.1.0.4.6.0"]');
+// const steelAll = document.querySelector('div[data-reactid=".0.5.1.0.5.6.0"]');
+// const alloyAll = document.querySelector('[data-reactid=".0.5.1.0.8.6.0"]');
+// const keroseneAll = document.querySelector('[data-reactid=".0.5.1.0.d.6.0"]');
+// const parchmentAll = document.querySelector('div[data-reactid=".0.5.1.0.e.6.0"]');
+// const manuscriptAll = document.querySelector('div[data-reactid=".0.5.1.0.f.6.0"]');
+// const compendiumAll = document.querySelector('div[data-reactid=".0.5.1.0.g.6.0"]');
 
 const cultureResource = document.querySelector('div[data-reactid=".0.0.1.1.d.2"]');
 const catPower = document.querySelector('[data-reactid=".0.0.1.1.b.2"]');
@@ -48,6 +48,7 @@ class CraftingResource {
     }
 }
 
+document.querySelector(".Trade").click();
 // this returns a list of all trade buttons + send explorers
 let tradingArray = Array.from(document.querySelectorAll(".btnContent")).filter((element, index) => {
     if (index % 2 == 0) {
@@ -67,16 +68,12 @@ tradingArray.forEach((element, index) => {
     new CraftingResource(traderName, element.children[1]);
 });
 
-const Wood = new CraftingResource("Wood", woodAll);
-const Beam = new CraftingResource("Beam", beamAll);
-const Slab = new CraftingResource("Slab", slabAll);
-const Steel = new CraftingResource("Steel", steelAll);
-const Plate = new CraftingResource("Plate", plateAll);
-const Alloy = new CraftingResource("Alloy", alloyAll);
-const Kerosene = new CraftingResource("Kerosene", keroseneAll);
-const Parchment = new CraftingResource("Parchment", parchmentAll);
-const Manuscript = new CraftingResource("Manuscript", manuscriptAll);
-const Compendium = new CraftingResource("Compendium", compendiumAll);
+let craftingArray = Array.from(document.querySelectorAll(".craft"));
+
+craftingArray.forEach((element, index) => {
+    new CraftingResource(element.querySelector(".resource-name").innerText, element.querySelector(".all"));
+});
+
 const Praise = new CraftingResource("Praise", praise);
 
 const Hunt = new CraftingResource("Hunt", huntAll); // this has to be last, since it's an ordered list
