@@ -10,13 +10,14 @@ const oil = document.querySelector('[data-reactid=".0.0.1.1.7.2"]');
 const oilMax = document.querySelector('[data-reactid=".0.0.1.1.7.3"]');
 
 const Resources = new Map();
+const Embassies = new Map();
+const Traders = new Map();
 
-class CraftingResource {
+class Resource {
     constructor(name, element) {
         this.name = name;
         this.element = element;
         this.automate = false;
-        Resources.set(name, this);
     }
 
     flipAutomate() {
@@ -24,67 +25,118 @@ class CraftingResource {
     }
 }
 
+class CraftingClass extends Resource {
+    constructor(name, element, id = null) {
+        super(name, element);
+        this.id = id;
+        Resources.set(name, this);
+    }
+}
+
+class TraderClass extends Resource {
+    constructor(name, element) {
+        super(name, element);
+        Traders.set(name, this);
+    }
+}
+
+class EmbassyClass extends Resource {
+    constructor(name, element, index) {
+        super(name, element);
+        this.index = index;
+        this.element = this;
+        Embassies.set(name, this);
+    }
+
+    click() {
+        document.querySelectorAll(".panelContainer")[this.index].querySelectorAll(".btnContent")[1].click();
+    }
+}
+CraftingClass.interval = null;
+CraftingClass.intervalTime = 15000;
+
+TraderClass.interval = null;
+TraderClass.intervalTime = 5000;
+
+EmbassyClass.interval = null;
+EmbassyClass.intervalTime = 5000;
+
 document.querySelector(".Trade").click();
 
-new CraftingResource("Explorers", document.querySelector(".explore .btnTitle"));
+new CraftingClass("explorers", document.querySelector(".explore"));
 
-let tradingArray = Array.from(document.querySelectorAll(".panelContainer"));
+const tradingArray = Array.from(document.querySelectorAll(".panelContainer"));
 
-tradingArray.forEach((element) => {
-    let traderName = element.querySelector(".title").innerText.split(" ")[0]; // "Lizard Friendly".split(" ")
+tradingArray.forEach((element, index) => {
+    let traderName = element.querySelector(".title").innerText.split(" ")[0].toLowerCase(); // "Lizard Friendly".split(" ")
     let traderAll = element.querySelector(".btnContent a");
-
-    new CraftingResource(traderName, traderAll);
+    new EmbassyClass(traderName + "_embassy", element, index);
+    new TraderClass(traderName, traderAll);
 });
 
-let craftingArray = Array.from(document.querySelectorAll(".craft"));
+//document.querySelectorAll(".panelContainer")[1].querySelectorAll(".btnContent")[1].click(); EmbassyClass upgrades... uncachable atm
+
+const craftingArray = Array.from(document.querySelectorAll(".craft"));
 
 craftingArray.forEach((element, index) => {
-    const resourceName = element.querySelector(".resource-name").innerText;
+    const name = element.querySelector(".resource-name").innerText;
     const resourceElement = element.querySelector(".all");
+    const id = resourceElement.dataset.reactid;
 
-    new CraftingResource(resourceName, resourceElement);
+    new CraftingClass(name, resourceElement, id);
 });
 
-const Praise = new CraftingResource("Praise", praise);
+const Praise = new CraftingClass("praise", praise);
 
-const Hunt = new CraftingResource("Hunt", huntAll); // this has to be last, since it's an ordered list
+const Hunt = new CraftingClass("hunt", huntAll); // this has to be last, since it's an ordered list
 
-let ObjectKeys = Array.from(Resources.values());
+const CraftingKeys = Array.from(Resources.values());
 
-let ClickyArray = ObjectKeys.map((element, index) => {
+CraftingKeys.map((element, index) => {
+    if (!element) return;
     if (element.name == "steel") {
-        const plate = ObjectKeys[index - 1];
-        ObjectKeys[index - 1] = element;
-        ObjectKeys[index] = plate;
+        const plate = CraftingKeys[index - 1];
+        CraftingKeys[index - 1] = element;
+        CraftingKeys[index] = plate;
     }
-    return element;
-})
+});
 
+const TraderKeys = Array.from(Traders.values());
+const EmbassyKeys = Array.from(Embassies.values());
 
 let craftingInterval;
+let tradingInterval;
+let embassyInterval;
+let huntInterval;
+let praiseInterval;
 
-function startInterval() {
-    console.log("Starting automatic crafting");
-    craftingInterval = setInterval(() => {
-        try {
-            ObjectKeys.forEach((key) => {
-                if (key.automate && key.element) {
-                    if (specialAction(key, "Hunt", catPower, catPowerMax, 0.5)) return;
-                    if (specialAction(key, "Alloy", titanium, titaniumMax, 0.75)) return;
-                    if (specialAction(key, "Kerosene", oil, oilMax, 0.75)) return;
-                    key.element.click();
-                    // Check if any there are more civilizations to discover
-                    if (key.name == "Explorers" && document.querySelectorAll("span.msg")[1].innerText.search("Your explorers failed to find anyone.") >= 0) {
-                        document.querySelector(`#leme_${key.name}_id`).click();
-                    }
+function automatedFunction(arr) {
+    try {
+        arr.forEach((key) => {
+            if (key.automate && key.element) {
+                if (specialAction(key, "hunt", catPower, catPowerMax, 0.5)) return;
+                if (specialAction(key, "alloy", titanium, titaniumMax, 0.75)) return;
+                if (specialAction(key, "kerosene", oil, oilMax, 0.75)) return;
+                key.element.click();
+                if (key.name == "explorers" && document.querySelectorAll("span.msg")[1].innerText.search("Your explorers failed to find anyone.") >= 0) {
+                    document.querySelector(`#leme_${key.name}_id`).click();
                 }
-            });
-        } catch (err) {
-            console.log(err)
-        }
-        //if (cultureResource.innerHTML > 2400) manuscriptAll.click();
-    }, 15000);
+            }
+        });
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+function startInterval(controller, arr) {
+    console.log("Starting automatic", controller);
+    controller.interval = setInterval(automatedFunction, controller.intervalTime, arr);
+}
+
+function stopInterval(controller) {
+    console.log("Stopping automatic", controller);
+    clearInterval(controller.interval);
+    controller.interval = null;
 }
 
 function specialAction(key, resourceName, current, max, threshold) {
@@ -96,20 +148,13 @@ function specialAction(key, resourceName, current, max, threshold) {
 
 function replaceNotation(current) {
     let multiplyBy = 1;
-    if (current.innerText.search("K")) {
+    if (current.innerText.search("K") >= 0) {
         multiplyBy = 1000;
-    } else if (current.innerText.search("M")) {
+    } else if (current.innerText.search("M") >= 0) {
         multiplyBy = 1000000;
     }
     let newCurrent = current.innerText.replace("/", "");
     return parseInt(newCurrent) * multiplyBy;
-}
-
-function stopInterval() {
-    console.log("Stopping automatic crafting");
-
-    clearInterval(craftingInterval);
-    craftingInterval = null;
 }
 
 
@@ -123,33 +168,49 @@ myDiv.style.position = "fixed";
 myDiv.style.right = "50px";
 myDiv.style.top = "50px";
 
-let checkBoxArray = [];
-let checkBoxAndLabelArray = [];
+function createIntervalBoxes(name, controller, arr) {
+    const sectionContainer = document.createElement("div");
 
-ObjectKeys.forEach((resource) => {
-    createCheckBox(resource);
-})
+    const AutoCheckBox = document.createElement("input");
+    AutoCheckBox.type = "checkBox";
+    AutoCheckBox.name = name;
+    AutoCheckBox.value = false;
+    AutoCheckBox.id = `leme_${name}_id`;
 
-const AutoCheckBox = document.createElement("input");
-AutoCheckBox.type = "checkBox";
-AutoCheckBox.name = "Automate";
-AutoCheckBox.value = false;
-AutoCheckBox.id = `leme_automate_id`;
+    const AutoCheckBoxLabel = document.createElement("label");
+    AutoCheckBoxLabel.htmlFor = AutoCheckBox.id;
+    AutoCheckBoxLabel.appendChild(document.createTextNode(name));
 
-const AutoCheckBoxLabel = document.createElement("label");
-AutoCheckBoxLabel.htmlFor = AutoCheckBox.id;
-AutoCheckBoxLabel.appendChild(document.createTextNode("Automate"));
+    AutoCheckBox.addEventListener("click", () => {
+        if (controller.interval) stopInterval(controller);
+        else startInterval(controller, arr);
+    });
 
-AutoCheckBox.addEventListener("click", () => {
-    if (craftingInterval) stopInterval();
-    else startInterval();
-});
+    const IntervalTimeInput = document.createElement("input");
+    IntervalTimeInput.type = "number";
+    IntervalTimeInput.value = controller.intervalTime;
+    IntervalTimeInput.onchange = (() => {
+        controller.intervalTime = IntervalTimeInput.value;
+        console.log(controller.intervalTime);
+    });
 
-myDiv.appendChild(AutoCheckBox);
-myDiv.appendChild(AutoCheckBoxLabel);
+    IntervalTimeInput.style.width = "75px";
+    IntervalTimeInput.style.margin = "0 0 0 5px";
 
+    sectionContainer.appendChild(AutoCheckBox);
+    sectionContainer.appendChild(AutoCheckBoxLabel);
+    sectionContainer.appendChild(IntervalTimeInput);
 
-function createCheckBox(resource) {
+    sectionContainer.style.margin = "10px";
+
+    myDiv.appendChild(sectionContainer);
+
+    arr.forEach((resource) => {
+        createCheckBox(resource, sectionContainer);
+    });
+}
+
+function createCheckBox(resource, container) {
     const checkBox = document.createElement("input");
     checkBox.type = "checkBox";
     checkBox.name = resource.name;
@@ -159,19 +220,20 @@ function createCheckBox(resource) {
     const checkBoxLabel = document.createElement("label");
     checkBoxLabel.htmlFor = checkBox.id;
     checkBoxLabel.appendChild(document.createTextNode(`${resource.name}`));
-    checkBoxArray.push(checkBox);
-    checkBoxAndLabelArray.push([checkBox, checkBoxLabel]);
     checkBox.addEventListener("click", () => {
         resource.flipAutomate();
     });
+
+    let div = document.createElement("div");
+
+    div.appendChild(checkBox);
+    div.appendChild(checkBoxLabel);
+
+    container.appendChild(div);
 }
 
-checkBoxAndLabelArray.forEach(([box, label]) => {
-    let div = document.createElement("div");
-    console.log(box, label);
-    div.appendChild(box);
-    div.appendChild(label);
-    myDiv.appendChild(div);
-});
+createIntervalBoxes("Automate", CraftingClass, CraftingKeys);
+createIntervalBoxes("Trading", TraderClass, TraderKeys);
+createIntervalBoxes("Embassies", EmbassyClass, EmbassyKeys);
 
 document.body.appendChild(myDiv);
