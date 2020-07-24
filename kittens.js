@@ -9,6 +9,8 @@ const titaniumMax = document.querySelector('[data-reactid=".0.0.1.1.5.3"]');
 const oil = document.querySelector('[data-reactid=".0.0.1.1.7.2"]');
 const oilMax = document.querySelector('[data-reactid=".0.0.1.1.7.3"]');
 
+const tradeTab = document.querySelector(".Trade");
+
 const Resources = new Map();
 const Embassies = new Map();
 const Traders = new Map();
@@ -18,6 +20,7 @@ class Resource {
         this.name = name;
         this.element = element;
         this.automate = false;
+        this.div = null;
     }
 
     flipAutomate() {
@@ -52,6 +55,7 @@ class EmbassyClass extends Resource {
         document.querySelectorAll(".panelContainer")[this.index].querySelectorAll(".btnContent")[1].click();
     }
 }
+
 CraftingClass.interval = null;
 CraftingClass.intervalTime = 15000;
 
@@ -61,57 +65,50 @@ TraderClass.intervalTime = 5000;
 EmbassyClass.interval = null;
 EmbassyClass.intervalTime = 5000;
 
-document.querySelector(".Trade").click();
 
-new CraftingClass("explorers", document.querySelector(".explore"));
+function getTraders() {
+    tradeTab.click();
 
-const tradingArray = Array.from(document.querySelectorAll(".panelContainer"));
-
-tradingArray.forEach((element, index) => {
-    let traderName = element.querySelector(".title").innerText.split(" ")[0].toLowerCase(); // "Lizard Friendly".split(" ")
-    let traderAll = element.querySelector(".btnContent a");
-    new EmbassyClass(traderName + "_embassy", element, index);
-    new TraderClass(traderName, traderAll);
-});
-
-//document.querySelectorAll(".panelContainer")[1].querySelectorAll(".btnContent")[1].click(); EmbassyClass upgrades... uncachable atm
-
-const craftingArray = Array.from(document.querySelectorAll(".craft"));
-
-craftingArray.forEach((element, index) => {
-    const name = element.querySelector(".resource-name").innerText;
-    const resourceElement = element.querySelector(".all");
-    const id = resourceElement.dataset.reactid;
-
-    new CraftingClass(name, resourceElement, id);
-});
-
-const Praise = new CraftingClass("praise", praise);
-
-const Hunt = new CraftingClass("hunt", huntAll); // this has to be last, since it's an ordered list
-
-const CraftingKeys = Array.from(Resources.values());
-
-CraftingKeys.map((element, index) => {
-    if (!element) return;
-    if (element.name == "steel") {
-        const plate = CraftingKeys[index - 1];
-        CraftingKeys[index - 1] = element;
-        CraftingKeys[index] = plate;
+    if (!Traders.get("explorers")) {
+        new TraderClass("explorers", document.querySelector(".explore")); // this should be first,
     }
-});
 
-const TraderKeys = Array.from(Traders.values());
-const EmbassyKeys = Array.from(Embassies.values());
+    const tradingArray = Array.from(document.querySelectorAll(".panelContainer"));
 
-let craftingInterval;
-let tradingInterval;
-let embassyInterval;
-let huntInterval;
-let praiseInterval;
+    tradingArray.forEach((element, index) => {
+        let traderName = element.querySelector(".title").innerText.split(" ")[0].toLowerCase(); // "Lizard Friendly".split(" ")
+        let traderAll = element.querySelector(".btnContent a");
+        if (Traders.get(traderName)) return;
+        new EmbassyClass(traderName + "_embassy", element, index);
+        new TraderClass(traderName, traderAll);
+    });
+
+    if (!Traders.get("hunt")) {
+        new TraderClass("hunt", huntAll); // this has to be last, since it's an ordered list
+    }
+}
+
+function getCrafting() {
+    const craftingArray = Array.from(document.querySelectorAll(".craft"));
+
+    craftingArray.forEach((element, index) => {
+        const name = element.querySelector(".resource-name").innerText;
+        if (Resources.get(name)) return;
+        const resourceElement = element.querySelector(".all");
+        const id = resourceElement.dataset.reactid;
+
+        new CraftingClass(name, resourceElement, id);
+    });
+
+    if (!Resources.get("praise")) {
+        new CraftingClass("praise", praise);
+    }
+}
 
 function automatedFunction(arr) {
     try {
+        activeTab = document.querySelector(".activeTab");
+        if (arr[0] instanceof EmbassyClass) tradeTab.click();
         arr.forEach((key) => {
             if (key.automate && key.element) {
                 if (specialAction(key, "hunt", catPower, catPowerMax, 0.5)) return;
@@ -125,6 +122,8 @@ function automatedFunction(arr) {
         });
     } catch (err) {
         console.log(err);
+    } finally {
+        activeTab.click();
     }
 }
 
@@ -157,24 +156,16 @@ function replaceNotation(current) {
     return parseInt(newCurrent) * multiplyBy;
 }
 
-
-let observeInterval = setInterval(() => {
-    if (document.querySelector("#observeBtn"))
-        document.querySelector("#observeBtn").click();
-}, 3000) // a day is roughly 3 sec
-
-const myDiv = document.createElement("div");
-myDiv.style.position = "fixed";
-myDiv.style.right = "50px";
-myDiv.style.top = "50px";
-
 function createIntervalBoxes(name, controller, arr) {
+    if (controller.onBeforeCleanup) startInterval(controller, arr);
+
     const sectionContainer = document.createElement("div");
 
     const AutoCheckBox = document.createElement("input");
     AutoCheckBox.type = "checkBox";
     AutoCheckBox.name = name;
-    AutoCheckBox.value = false;
+    AutoCheckBox.value = controller.interval ? true : false;
+    AutoCheckBox.checked = controller.interval ? true : false;
     AutoCheckBox.id = `leme_${name}_id`;
 
     const AutoCheckBoxLabel = document.createElement("label");
@@ -203,7 +194,9 @@ function createIntervalBoxes(name, controller, arr) {
 
     sectionContainer.style.margin = "10px";
 
-    myDiv.appendChild(sectionContainer);
+    MAIN_DIV.appendChild(sectionContainer);
+
+    controller.div = sectionContainer;
 
     arr.forEach((resource) => {
         createCheckBox(resource, sectionContainer);
@@ -215,6 +208,7 @@ function createCheckBox(resource, container) {
     checkBox.type = "checkBox";
     checkBox.name = resource.name;
     checkBox.value = resource.automate;
+    checkBox.checked = resource.automate;
     checkBox.id = `leme_${resource.name}_id`;
 
     const checkBoxLabel = document.createElement("label");
@@ -223,7 +217,6 @@ function createCheckBox(resource, container) {
     checkBox.addEventListener("click", () => {
         resource.flipAutomate();
     });
-
     let div = document.createElement("div");
 
     div.appendChild(checkBox);
@@ -232,8 +225,73 @@ function createCheckBox(resource, container) {
     container.appendChild(div);
 }
 
-createIntervalBoxes("Automate", CraftingClass, CraftingKeys);
-createIntervalBoxes("Trading", TraderClass, TraderKeys);
-createIntervalBoxes("Embassies", EmbassyClass, EmbassyKeys);
+function cleanUp() {
+    [CraftingClass, TraderClass, EmbassyClass].forEach((element) => {
+        element.div.remove();
+        if (element.interval) element.onBeforeCleanup = true;
+        else element.onBeforeCleanup = false;
+        stopInterval(element);
+    });
+}
 
-document.body.appendChild(myDiv);
+function main() {
+    getTraders();
+
+    getCrafting();
+
+    const CraftingKeys = Array.from(Resources.values());
+
+    CraftingKeys.map((element, index) => {
+        if (!element) return;
+        if (element.name == "steel") {
+            // reorder plate to come after steel
+            const plate = CraftingKeys[index - 1];
+            CraftingKeys[index - 1] = element;
+            CraftingKeys[index] = plate;
+        }
+    });
+
+    const TraderKeys = Array.from(Traders.values());
+    const EmbassyKeys = Array.from(Embassies.values());
+
+    let observeInterval = setInterval(() => {
+        if (document.querySelector("#observeBtn"))
+            document.querySelector("#observeBtn").click();
+    }, 3000) // a day is roughly 3 sec
+
+    let myArr = [["Automate", CraftingClass, CraftingKeys], ["Trading", TraderClass, TraderKeys], ["Embassies", EmbassyClass, EmbassyKeys]];
+
+    myArr.forEach((element) => {
+        createIntervalBoxes(element[0], element[1], element[2]);
+    });
+
+    activeTab.click();
+}
+let activeTab = document.querySelector(".activeTab");
+const MAIN_DIV = document.createElement("div");
+MAIN_DIV.style.position = "fixed";
+MAIN_DIV.style.right = "50px";
+MAIN_DIV.style.top = "50px";
+document.body.appendChild(MAIN_DIV);
+
+
+main();
+
+
+
+let lastCraftCount = Resources.size;
+let lastTraderCount = Traders.size;
+
+setInterval(() => {
+    let newCraftCount = Array.from(document.querySelectorAll(".craft")).length + 1;
+    let newTraderCount = Array.from(document.querySelectorAll(".panelContainer")).length + 2;
+
+    if (newCraftCount > lastCraftCount || newTraderCount > lastTraderCount) {
+        console.log("UPDATING");
+        activeTab = document.querySelector(".activeTab");
+        cleanUp();
+        main();
+        lastCraftCount = newCraftCount;
+        lastTraderCount = newTraderCount;
+    }
+}, 5000);
